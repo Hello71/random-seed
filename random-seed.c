@@ -13,12 +13,6 @@
  * limitations under the License.
  */
 
-/* we don't use enough CPU time, better be safe than sorry */
-#ifdef NDEBUG
-#warning "NDEBUG is always disabled for security"
-#undef NDEBUG
-#endif
-
 #include <assert.h>
 #include <errno.h>
 #include <fcntl.h>

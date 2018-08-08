@@ -76,7 +76,7 @@ static bool get_machine_id(unsigned char **machine_id) {
     }
 
     size_t machine_id_len = 0;
-    if (getdelim((char **)machine_id, &machine_id_len, '\0', machine_id_file) != -1) {
+    if (getdelim((char **)machine_id, &machine_id_len, '\0', machine_id_file) == -1) {
         fputs("error reading machine id file\n", stderr);
         *machine_id = NULL;
         return false;

@@ -65,37 +65,24 @@ static inline void usage() {
 }
 
 static bool get_machine_id(unsigned char **machine_id) {
-#ifdef HAVE_SYSTEMD
-    sd_id128_t raw_machine_id;
-    int r = sd_id128_get_machine(&raw_machine_id);
-    if (r) {
-        fprintf(stderr, "error getting machine id: %s\n", strerror(-r));
-        *machine_id = NULL;
-        return false;
-    }
-    *machine_id = malloc(33);
-    /* convert to string to be compatible with non-hex machine IDs */
-    sd_id128_to_string(raw_machine_id, (char *)*machine_id);
-    /* match /etc/machine-id format */
-    (*machine_id)[32] = '\n';
-
-    return true;
+#ifdef MACHINE_ID_PATH
+    FILE *machine_id_file = fopen(MACHINE_ID_PATH, "r");
 #else
-    const char *etc_machine_id = SYSCONFDIR "/machine-id";
-    const char *var_lib_dbus_machine_id = LOCALSTATEDIR "/lib/dbus/machine-id";
+    const char *etc_machine_id = "/etc/machine-id";
+    const char *var_lib_dbus_machine_id = "/var/lib/dbus/machine-id";
     FILE *machine_id_file = fopen(etc_machine_id, "r");
     if (!machine_id_file) {
         if (errno != ENOENT)
             fprintf(stderr, "error opening %s: %s, trying %s\n",
                     etc_machine_id, strerror(errno), var_lib_dbus_machine_id);
         machine_id_file = fopen(var_lib_dbus_machine_id, "r");
-        if (!machine_id_file) {
-            fprintf(stderr, "couldn't open any machine-id file, last error: "
-                    "%s; tried: %s, %s\n", strerror(errno), etc_machine_id,
-                    var_lib_dbus_machine_id);
-            *machine_id = NULL;
-            return false;
-        }
+    }
+#endif
+
+    if (!machine_id_file) {
+        perror("couldn't open any machine-id file, last error");
+        *machine_id = NULL;
+        return false;
     }
 
     size_t machine_id_len = 0;
@@ -106,7 +93,6 @@ static bool get_machine_id(unsigned char **machine_id) {
     }
 
     return true;
-#endif
 }
 
 static bool get_machine_id_hash(const unsigned char salt[static SALT_LEN], unsigned char machine_id_digest[static HASH_LEN]) {

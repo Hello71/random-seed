@@ -5,4 +5,5 @@ set -e
 autoheader &
 aclocal
 autoconf
+
 wait

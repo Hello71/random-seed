@@ -1,19 +1,25 @@
 # @configure_input@
 
+VPATH = @abs_srcdir@
+abs_srcdir = @abs_srcdir@
+
+prefix = @prefix@
+exec_prefix = @exec_prefix@
 datarootdir = @datarootdir@
 sbindir = @sbindir@
 sysconfdir = @sysconfdir@
 localstatedir = @localstatedir@
 mandir = @mandir@
-CPPFLAGS = @CPPFLAGS@ -DSYSCONFDIR='"$(sysconfdir)"' -DLOCALSTATEDIR='"$(localstatedir)"'
-CFLAGS = -Wall -Wextra -pedantic @SYSTEMD_CFLAGS@ @CFLAGS@ -MD -MP -UNDEBUG -include @abs_top_builddir@/config.h
-LDFLAGS = @LDFLAGS@
-LDLIBS = @SYSTEMD_LIBS@
+systemdsystemunitdir = @systemdsystemunitdir@
 
-SRC ::= random-seed.c sha2.c util.c
-OBJ ::= $(SRC:.c=.o)
-DEP ::= $(SRC:.c=.d)
-TEST_FILE ::= random-seed.test
+CPPFLAGS = @CPPFLAGS@
+CFLAGS = -Wall -Wextra -pedantic @CFLAGS@ -MD -MP -UNDEBUG -include @abs_top_builddir@/config.h
+LDFLAGS = @LDFLAGS@
+
+SRC := random-seed.c sha2.c util.c
+OBJ := $(SRC:.c=.o)
+DEP := $(SRC:.c=.d)
+TEST_FILE := random-seed.test
 
 all: random-seed
 
@@ -21,9 +27,9 @@ random-seed: $(OBJ)
 
 install: random-seed
 	install -D -m755 random-seed $(sbindir)/random-seed
-	install -D -m644 random-seed.8 $(mandir)/man8/random-seed.8
-ifneq (@systemdsystemunitdir@,)
-	install -D -m644 random-seed.service @systemdsystemunitdir@/random-seed.service
+	install -D -m644 $(abs_srcdir)/random-seed.8 $(mandir)/man8/random-seed.8
+ifneq ($(systemdsystemunitdir),)
+	install -D -m644 $(abs_srcdir)/random-seed.service $(systemdsystemunitdir)/random-seed.service
 endif
 
 test: $(TEST_FILE)

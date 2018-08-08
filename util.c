@@ -63,7 +63,7 @@ void hash(const unsigned char salt[static SALT_LEN], unsigned char *out, const v
 #endif
     sha256_ctx ctx;
     sha256_init(&ctx);
-    //sha256_update(&ctx, salt, SALT_LEN);
+    sha256_update(&ctx, salt, SALT_LEN);
     sha256_update(&ctx, in, (unsigned int)size);
     sha256_final(&ctx, out);
 }
@@ -73,6 +73,8 @@ void print_hash(const unsigned char digest[static HASH_LEN]) {
     char hash[HASH_LEN*2+1];
     mem2hex(hash, digest, HASH_LEN);
     fprintf(stderr, "hash: %s\n", hash);
+#else
+    (void)digest;
 #endif
 }
 

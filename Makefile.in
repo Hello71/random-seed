@@ -1,0 +1,41 @@
+# @configure_input@
+
+datarootdir = @datarootdir@
+sbindir = @sbindir@
+sysconfdir = @sysconfdir@
+localstatedir = @localstatedir@
+mandir = @mandir@
+CPPFLAGS = @CPPFLAGS@
+CFLAGS = -Wall -Wextra -pedantic @SYSTEMD_CFLAGS@ @CFLAGS@ -MD -MP -UNDEBUG -include @abs_top_builddir@/config.h
+LDFLAGS = @LDFLAGS@
+LDLIBS = @SYSTEMD_LIBS@
+
+SRC ::= random-seed.c sha2.c util.c readall.c
+OBJ ::= $(SRC:.c=.o)
+DEP ::= $(SRC:.c=.d)
+TEST_FILE ::= random-seed.test
+
+all: random-seed
+
+random-seed: $(OBJ)
+
+install: random-seed
+	install -D -m755 random-seed $(sbindir)/random-seed
+	install -D -m644 random-seed.8 $(mandir)/man8/random-seed.8
+ifneq (@systemdsystemunitdir@,)
+	install -D -m644 random-seed.service @systemdsystemunitdir@/random-seed.service
+endif
+
+test: $(TEST_FILE)
+
+$(TEST_FILE): random-seed
+	./random-seed save $(TEST_FILE)
+	./random-seed load $(TEST_FILE)
+
+clean:
+	$(RM) random-seed $(OBJ) $(DEP) $(TEST_FILE)
+
+-include $(DEP)
+
+.PHONY: all install test clean
+.INTERMEDIATE: $(TEST_FILE)

@@ -1,0 +1,13 @@
+random-seed is a random seed management program.  In contrast with other random
+seed implementations, random-seed will credit the random seed to the kernel
+entropy count.  It attempts to prevent inadvertent random seed sharing by
+checking that certain system identifiers, such as the machine ID and filesystem
+ID have not changed between a save and load.  If these identifiers do not
+match, random-seed will still load the random seed, but will not credit the
+entropy.
+
+It is my understanding that other operating systems are either not commonly imaged (e.g. BSDs) or have official tools for system image preparation (e.g. sysprep for Windows). Therefore, random-seed is Linux specific. However, it should be reasonably easy to port by simply adjusting the paths and changing getrandom to /dev/random.
+
+random-seed requires GNU make to compile.
+
+random-seed requires Linux 3.11 or higher supporting the getrandom(2) system call.

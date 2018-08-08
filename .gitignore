@@ -1,0 +1,12 @@
+/aclocal.m4
+/autom4te.cache
+/config.h.in
+/config.log
+/config.status
+/configure
+/Makefile
+
+/random-seed
+/random-seed.test
+*.o
+*.d

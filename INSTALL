@@ -1,0 +1,10 @@
+Use ./configure; make; sudo make test; sudo make install.
+
+If building from git, run ./autogen.sh first.
+
+Tests must be run as root in order to access RNDADDENTROPY.
+
+On systemd, to set random-seed as your random seed provider, execute:
+
+    systemctl enable random-seed
+    systemctl mask systemd-random-seed

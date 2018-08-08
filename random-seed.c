@@ -240,14 +240,14 @@ static bool load(FILE *seed_file) {
         credit_entropy = false;
     }
 
-    int urandom_fd = open("/dev/urandom", O_RDWR, 0);
-    if (urandom_fd == -1) {
-        perror("error opening /dev/urandom");
+    int random_fd = open("/dev/random", O_RDWR, 0);
+    if (random_fd == -1) {
+        perror("error opening /dev/random");
         exit(5);
     }
 
     if (credit_entropy) {
-        if (ioctl(urandom_fd, RNDADDENTROPY, &rpi) == -1) {
+        if (ioctl(random_fd, RNDADDENTROPY, &rpi) == -1) {
             perror("ioctl(RNDADDENTROPY)");
             if (errno == EPERM) {
                 fputs("Continuing without crediting entropy.\n", stderr);
@@ -257,8 +257,8 @@ static bool load(FILE *seed_file) {
     }
 
     if (!credit_entropy) {
-        if (write(urandom_fd, &rpi.buf, RAND_POOL_SIZE) != RAND_POOL_SIZE) {
-            fputs("error writing entropy to /dev/urandom\n", stderr);
+        if (write(random_fd, &rpi.buf, RAND_POOL_SIZE) != RAND_POOL_SIZE) {
+            fputs("error writing entropy to /dev/random\n", stderr);
             exit(5);
         }
     }

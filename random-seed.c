@@ -29,10 +29,6 @@
 #include <sys/syscall.h>
 #include <unistd.h>
 
-#ifndef WITHOUT_SYSTEMD
-#include <systemd/sd-id128.h>
-#endif
-
 #include "musl-libgen-c.h"
 #include "util.h"
 

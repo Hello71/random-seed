@@ -40,7 +40,6 @@
 #endif
 
 #include "musl-libgen-c.h"
-#include "readall.h"
 #include "util.h"
 
 // musl forbids include/linux
@@ -65,14 +64,14 @@ static inline void usage() {
     puts("see random-seed(8) for more information.");
 }
 
-static size_t get_machine_id(unsigned char **machine_id) {
+static bool get_machine_id(unsigned char **machine_id) {
 #ifdef HAVE_SYSTEMD
     sd_id128_t raw_machine_id;
     int r = sd_id128_get_machine(&raw_machine_id);
     if (r) {
         fprintf(stderr, "error getting machine id: %s\n", strerror(-r));
         *machine_id = NULL;
-        return 0;
+        return false;
     }
     *machine_id = malloc(33);
     /* convert to string to be compatible with non-hex machine IDs */
@@ -80,11 +79,8 @@ static size_t get_machine_id(unsigned char **machine_id) {
     /* match /etc/machine-id format */
     (*machine_id)[32] = '\n';
 
-    return 33;
+    return true;
 #else
-    char *machine_id;
-    ssize_t machine_id_len;
-
     const char *etc_machine_id = SYSCONFDIR "/machine-id";
     const char *var_lib_dbus_machine_id = LOCALSTATEDIR "/lib/dbus/machine-id";
     FILE *machine_id_file = fopen(etc_machine_id, "r");
@@ -98,17 +94,18 @@ static size_t get_machine_id(unsigned char **machine_id) {
                     "%s; tried: %s, %s\n", strerror(errno), etc_machine_id,
                     var_lib_dbus_machine_id);
             *machine_id = NULL;
-            return 0;
+            return false;
         }
     }
 
-    if (readall(machine_id_file, machine_id, &machine_id_len) != READALL_OK) {
+    size_t machine_id_len = 0;
+    if (getdelim((char **)machine_id, &machine_id_len, '\0', machine_id_file) != -1) {
         fputs("error reading machine id file\n", stderr);
         *machine_id = NULL;
-        return 0;
+        return false;
     }
 
-    return machine_id_len;
+    return true;
 #endif
 }
 

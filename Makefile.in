@@ -5,12 +5,12 @@ sbindir = @sbindir@
 sysconfdir = @sysconfdir@
 localstatedir = @localstatedir@
 mandir = @mandir@
-CPPFLAGS = @CPPFLAGS@
+CPPFLAGS = @CPPFLAGS@ -DSYSCONFDIR='"$(sysconfdir)"' -DLOCALSTATEDIR='"$(localstatedir)"'
 CFLAGS = -Wall -Wextra -pedantic @SYSTEMD_CFLAGS@ @CFLAGS@ -MD -MP -UNDEBUG -include @abs_top_builddir@/config.h
 LDFLAGS = @LDFLAGS@
 LDLIBS = @SYSTEMD_LIBS@
 
-SRC ::= random-seed.c sha2.c util.c readall.c
+SRC ::= random-seed.c sha2.c util.c
 OBJ ::= $(SRC:.c=.o)
 DEP ::= $(SRC:.c=.d)
 TEST_FILE ::= random-seed.test

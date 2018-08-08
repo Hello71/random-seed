@@ -12,8 +12,9 @@ localstatedir = @localstatedir@
 mandir = @mandir@
 systemdsystemunitdir = @systemdsystemunitdir@
 
-CPPFLAGS = @CPPFLAGS@
+CC = @CC@
 CFLAGS = -Wall -Wextra -pedantic @CFLAGS@ -MD -MP -UNDEBUG -include @abs_top_builddir@/config.h
+CPPFLAGS = @CPPFLAGS@
 LDFLAGS = @LDFLAGS@
 
 SRC := random-seed.c sha2.c util.c

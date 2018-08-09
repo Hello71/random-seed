@@ -22,6 +22,7 @@
 #include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <stdnoreturn.h>
 #include <string.h>
 #include <sys/ioctl.h>
 #include <sys/stat.h>
@@ -38,6 +39,7 @@
 /* 3 hours */
 #define DAEMONIZE_SLEEP_TIME (3*60*60)
 
+/* random pool is always the same size, so use a fixed size array */
 struct rand_pool_info_ {
         int entropy_count;
         int buf_size;
@@ -322,7 +324,6 @@ static bool save(const char *seed_path, unsigned char *random_buf) {
 
     seed_path_tmp = strdup(seed_path);
 
-    // TODO: rewrite when AT_REPLACE gets added... eventually...
     seed_dir_fd = open(mydirname(seed_path_tmp), O_RDONLY | O_DIRECTORY);
     if (seed_dir_fd == -1) {
         perror("error opening seed directory");
@@ -437,26 +438,12 @@ static void sighandler(int signum) {
     }
 }
 
-int main(int argc, char *argv[]) {
-    const char *seed_path = argv[2];
+noreturn static void run(const char *mode, const char *seed_path) {
     FILE *seed_file;
     unsigned char random_buf[RAND_POOL_SIZE];
     int exit_status = 0;
 
-    if (argc == 2 && (streq(argv[1], "-h") || streq(argv[1], "--help"))) {
-        usage();
-        exit(0);
-    }
-
-    if (argc != 3) {
-        fprintf(stderr, "invalid argument count, expected 2\n");
-        usage();
-        exit(2);
-    }
-
-    umask(0077);
-
-    if (streq(argv[1], "load")) {
+    if (streq(mode, "load")) {
         bool refresh_seed = true;
 
         if (streq(seed_path, "-")) {
@@ -487,9 +474,9 @@ int main(int argc, char *argv[]) {
             }
         }
         exit(exit_status);
-    } else if (streq(argv[1], "save")) {
+    } else if (streq(mode, "save")) {
         exit(!save(seed_path, NULL));
-    } else if (streq(argv[1], "daemonize")) {
+    } else if (streq(mode, "daemonize")) {
         if (streq(seed_path, "-")) {
             fputs("error: seed_path cannot be - for daemonize\n", stderr);
             exit(2);
@@ -499,7 +486,8 @@ int main(int argc, char *argv[]) {
             perror("error opening seed file");
             exit(3);
         }
-        load(seed_file);
+        if (!load(seed_file))
+            fputs("warning: failed to load initial entropy\n", stderr);
 
         struct sigaction sa;
         sa.sa_handler = sighandler;
@@ -524,11 +512,41 @@ int main(int argc, char *argv[]) {
                 exit(exit_status);
             sleep(DAEMONIZE_SLEEP_TIME);
         }
-    } else if (streq(argv[1], "daemonise")) {
+    } else if (streq(mode, "daemonise")) {
         fputs("invalid mode (did you mean `daemonize'?)\n", stderr);
         exit(2);
     } else {
         fputs("invalid mode, expected load, save, or daemonize\n", stderr);
         exit(2);
     }
+}
+
+int main(int argc, char *argv[]) {
+    char *mode, *seed_path;
+
+    switch (argc) {
+        case 2:
+            if (streq(argv[1], "-h") || streq(argv[1], "--help")) {
+                usage();
+                exit(0);
+            }
+            if (streq(argv[1], "-V") || streq(argv[1], "--version")) {
+                printf("random-seed %s\n", PACKAGE_VERSION);
+                exit(0);
+            }
+            mode = argv[1];
+            seed_path = DEFAULT_SEED_PATH;
+            break;
+        case 3:
+            mode = argv[1];
+            seed_path = argv[2];
+            break;
+        default:
+            fprintf(stderr, "error: invalid arguments\n");
+            usage();
+            exit(2);
+    }
+
+    umask(0);
+    run(mode, seed_path);
 }

@@ -50,7 +50,7 @@ test: $(TEST_FILE)
 
 $(TEST_FILE): random-seed
 	./random-seed save $(TEST_FILE)
-	./random-seed load $(TEST_FILE)
+	./random-seed load $(TEST_FILE) || [ $$? = 15 ]
 
 clean:
 	$(RM) random-seed $(OBJ) $(DEP) $(TEST_FILE)

@@ -51,6 +51,8 @@ static const char MAGIC[] = "RANDOM SEED FILE VERSION 1\n";
 static sig_atomic_t sigint = 0;
 static sig_atomic_t sigterm = 0;
 
+static bool noperms = false;
+
 static inline void usage() {
     puts("usage: random-seed MODE FILE");
     puts("see random-seed(8) for more information.");
@@ -245,7 +247,7 @@ static bool load(FILE *seed_file) {
     int random_fd = open("/dev/random", O_RDWR, 0);
     if (random_fd == -1) {
         perror("error opening /dev/random");
-        exit(5);
+        exit(1);
     }
 
     if (credit_entropy) {
@@ -253,6 +255,7 @@ static bool load(FILE *seed_file) {
             perror("ioctl(RNDADDENTROPY)");
             if (errno == EPERM) {
                 fputs("Continuing without crediting entropy.\n", stderr);
+                noperms = true;
             }
             credit_entropy = false;
         }
@@ -261,7 +264,7 @@ static bool load(FILE *seed_file) {
     if (!credit_entropy) {
         if (write(random_fd, &rpi.buf, RAND_POOL_SIZE) != RAND_POOL_SIZE) {
             fputs("error writing entropy to /dev/random\n", stderr);
-            exit(5);
+            exit(1);
         }
     }
 
@@ -440,7 +443,6 @@ static void sighandler(int signum) {
 
 noreturn static void run(const char *mode, const char *seed_path) {
     FILE *seed_file;
-    unsigned char random_buf[RAND_POOL_SIZE];
     int exit_status = 0;
 
     if (streq(mode, "load")) {
@@ -452,14 +454,20 @@ noreturn static void run(const char *mode, const char *seed_path) {
             refresh_seed = false;
         } else {
             seed_file = fopen(seed_path, "r");
-            if (!seed_file) {
-                perror("error opening seed file");
-                exit(3);
-            }
         }
-        if (!load(seed_file))
-            exit_status = 1;
+        if (!seed_file) {
+            perror("error opening seed file");
+            exit(1);
+        }
+        if (!load(seed_file)) {
+            if (noperms)
+                exit_status = 15;
+            else
+                exit_status = 1;
+        }
         if (refresh_seed) {
+            unsigned char random_buf[RAND_POOL_SIZE];
+            unsigned char *random_ptr = random_buf;
             if (random_get(random_buf, sizeof(random_buf), GRND_NONBLOCK) == -1) {
                 if (errno != EAGAIN) {
                     perror("getrandom");
@@ -468,10 +476,10 @@ noreturn static void run(const char *mode, const char *seed_path) {
                 daemon(0, 1);
                 close(0);
                 close(1);
-                save(seed_path, NULL);
-            } else {
-                save(seed_path, random_buf);
+                random_ptr = NULL;
             }
+            if (!save(seed_path, random_ptr))
+                exit_status = 1;
         }
         exit(exit_status);
     } else if (streq(mode, "save")) {

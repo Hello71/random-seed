@@ -1,0 +1,11 @@
+[Unit]
+Description=Random seed save timer
+ConditionVirtualization=!container
+
+[Timer]
+OnActiveSec=3h
+OnUnitInactiveSec=3h
+AccuracySec=2h
+
+[Install]
+WantedBy=timers.target

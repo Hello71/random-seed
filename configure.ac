@@ -42,7 +42,6 @@ AC_ARG_WITH([default-seed-path],
             [default_seed_path=$withval],
             [default_seed_path=/var/lib/random-seed])
 AC_DEFINE_UNQUOTED(DEFAULT_SEED_PATH, "$default_seed_path", [default seed path])
-# assume people will not specify default_seed_path=/
 default_seed_path_dir=${default_seed_path%/*}
 AC_SUBST(default_seed_path_dir)
 

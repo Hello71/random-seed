@@ -6,5 +6,5 @@ Tests must be run as root in order to access RNDADDENTROPY.
 
 On systemd, to set random-seed as your random seed provider, execute:
 
-    systemctl enable random-seed
+    systemctl enable random-seed.service random-seed-save.timer
     systemctl mask systemd-random-seed

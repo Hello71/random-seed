@@ -1,0 +1,16 @@
+[Unit]
+Description=Random seed save
+RequiresMountsFor=@default_seed_path_dir@
+After=systemd-remount-fs.service
+
+[Service]
+ExecStart=@sbindir@/random-seed save
+CapabilityBoundingSet=CAP_SYS_ADMIN
+NoNewPrivileges=yes
+PrivateDevices=yes
+PrivateNetwork=yes
+ProtectKernelTunables=yes
+ProtectKernelModules=yes
+LockPersonality=yes
+TemporaryFileSystem=/:ro
+BindPaths=@default_seed_path_dir@

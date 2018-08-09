@@ -11,6 +11,7 @@ sysconfdir = @sysconfdir@
 localstatedir = @localstatedir@
 mandir = @mandir@
 systemdsystemunitdir = @systemdsystemunitdir@
+default_seed_path_dir = @default_seed_path_dir@
 
 CC = @CC@
 CFLAGS = -Wall -Wextra -pedantic @CFLAGS@ -MD -MP -UNDEBUG -include @abs_top_builddir@/config.h
@@ -22,15 +23,22 @@ OBJ := $(SRC:.c=.o)
 DEP := $(SRC:.c=.d)
 TEST_FILE := random-seed.test
 
-all: random-seed
+all: random-seed random-seed.service
 
 random-seed: $(OBJ)
 
-install: random-seed
-	install -D -m755 random-seed $(sbindir)/random-seed
-	install -D -m644 $(abs_srcdir)/random-seed.8 $(mandir)/man8/random-seed.8
+random-seed.service: random-seed.service.in
+	sed -e 's|@sbindir[@]|$(sbindir)|g' \
+	    -e 's|@default_seed_path_dir[@]|$(default_seed_path_dir)|g' \
+	    $< > $@
+
+install: all
+	install -D -m755 random-seed $(DESTDIR)$(sbindir)/random-seed
+	install -D -m644 $(abs_srcdir)/random-seed.8 $(DESTDIR)$(mandir)/man8/random-seed.8
 ifneq ($(systemdsystemunitdir),)
-	install -D -m644 $(abs_srcdir)/random-seed.service $(systemdsystemunitdir)/random-seed.service
+	install -D -m644 random-seed.service $(DESTDIR)$(systemdsystemunitdir)/random-seed.service
+	install -D -m644 $(abs_srcdir)/random-seed-save.service $(DESTDIR)$(systemdsystemunitdir)/random-seed-save.service
+	install -D -m644 $(abs_srcdir)/random-seed-save.timer $(DESTDIR)$(systemdsystemunitdir)/random-seed-save.timer
 endif
 
 test: $(TEST_FILE)

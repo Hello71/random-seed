@@ -14,18 +14,23 @@ systemdsystemunitdir = @systemdsystemunitdir@
 default_seed_path_dir = @default_seed_path_dir@
 
 CC = @CC@
-CFLAGS = -Wall -Wextra -pedantic @CFLAGS@ -MD -MP -UNDEBUG -include @abs_top_builddir@/config.h
+CFLAGS = -Wall -Wextra -pedantic @CFLAGS@ -UNDEBUG -include @abs_top_builddir@/config.h
 CPPFLAGS = @CPPFLAGS@
 LDFLAGS = @LDFLAGS@
 
 SRC := random-seed.c sha2.c util.c
 OBJ := $(SRC:.c=.o)
-DEP := $(SRC:.c=.d)
 TEST_FILE := random-seed.test
 
 all: random-seed random-seed.service
 
 random-seed: $(OBJ)
+
+random-seed.o: random-seed.c musl-libgen-c.h util.h sha2.h
+
+util.o: util.c util.h sha2.h
+
+sha2.o: sha2.c sha2.h
 
 random-seed.service: random-seed.service.in
 	sed -e 's|@sbindir[@]|$(sbindir)|g' \
@@ -50,7 +55,8 @@ $(TEST_FILE): random-seed
 clean:
 	$(RM) random-seed $(OBJ) $(DEP) $(TEST_FILE)
 
--include $(DEP)
+distclean: clean
+	$(RM) -r aclocal.m4 autom4te.cache config.h config.h.in 'config.h.in~' config.log config.status configure Makefile
 
 .PHONY: all install test clean
 .INTERMEDIATE: $(TEST_FILE)

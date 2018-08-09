@@ -22,18 +22,17 @@ AS_CASE([$enable_debug],
     [AC_MSG_ERROR([invalid argument to --enable-debug])]
 )
 
-AC_ARG_WITH([machine-id],
-            AC_HELP_STRING(--with-machine-id, [manually specify machine-id location [/etc/machine-id, /var/lib/dbus/machine-id]]),
-            [machine_id=$withval]
+AC_ARG_WITH([machine-id-path],
+            AC_HELP_STRING(--with-machine-id-path, [manually specify machine-id location [/etc/machine-id, /var/lib/dbus/machine-id]]),
+            [machine_id_path=$withval]
 )
-
-AS_IF([test -n "$machine_id"],
+AS_IF([test -n "$machine_id_path"],
       [
-       AS_CASE($machine_id,
+       AS_CASE($machine_id_path,
                [/*], [],
                [AC_MSG_ERROR([relative machine id path is invalid])]
               )
-       AC_DEFINE_UNQUOTED(MACHINE_ID_PATH, "$machine_id", [machine id location])
+       AC_DEFINE_UNQUOTED(MACHINE_ID_PATH, "$machine_id_path", [machine id location])
       ]
 )
 

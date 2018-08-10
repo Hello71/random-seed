@@ -49,8 +49,8 @@ endif
 test: $(TEST_FILE)
 
 $(TEST_FILE): random-seed
-	./random-seed save $(TEST_FILE)
-	./random-seed load $(TEST_FILE) || [ $$? = 15 ]
+	$(TEST_WRAPPER) ./random-seed save $(TEST_FILE)
+	$(TEST_WRAPPER) ./random-seed load $(TEST_FILE) || [ $$? = 15 ]
 
 clean:
 	$(RM) random-seed $(OBJ) $(DEP) $(TEST_FILE)
@@ -58,5 +58,5 @@ clean:
 distclean: clean
 	$(RM) -r aclocal.m4 autom4te.cache config.h config.h.in 'config.h.in~' config.log config.status configure Makefile
 
-.PHONY: all install test clean
+.PHONY: all install test clean random-seed.test
 .INTERMEDIATE: $(TEST_FILE)

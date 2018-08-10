@@ -213,7 +213,7 @@ static bool load(FILE *seed_file) {
             }
         }
 
-        char *nul = memchr(line, '\0', line_length);
+        char *nul = memchr(line, '\0', (size_t)line_length);
         if (nul) {
             fprintf(stderr, "error parsing seed file: encountered NUL byte in commands line %zu char %zu\n", linenum, nul - line + 1);
             credit_entropy = false;
@@ -272,10 +272,11 @@ static bool load(FILE *seed_file) {
 }
 
 static bool get_rand_pool(unsigned char *buf) {
-    size_t rand_bits_gotten = 0;
-    while (rand_bits_gotten < RAND_POOL_SIZE) {
-        long this_rand_bits_gotten = random_get(buf + rand_bits_gotten, RAND_POOL_SIZE - rand_bits_gotten, 0);
-        if (this_rand_bits_gotten < 0) {
+    size_t rand_bytes_gotten = 0;
+
+    do {
+        long this_rand_bytes_gotten = random_get(buf + rand_bytes_gotten, RAND_POOL_SIZE - rand_bytes_gotten, 0);
+        if (this_rand_bytes_gotten == -1) {
             switch (errno) {
                 case EAGAIN: continue;
                 case EINTR: return false;
@@ -284,9 +285,10 @@ static bool get_rand_pool(unsigned char *buf) {
                     exit(1);
             }
         } else {
-            rand_bits_gotten += (size_t)this_rand_bits_gotten;
+            rand_bytes_gotten += (size_t)this_rand_bytes_gotten;
         }
-    }
+    } while (rand_bytes_gotten < RAND_POOL_SIZE);
+
     return true;
 }
 
@@ -301,60 +303,63 @@ static bool save(const char *seed_path, unsigned char *random_buf) {
     assert(seed_path);
 
     bool rv = false;
-    char *seed_path_tmp = NULL;
-    char *seed_name_new = NULL;
 
-    unsigned char my_random_buf[RAND_POOL_SIZE];
-    if (!random_buf) {
-        if (!get_rand_pool(my_random_buf))
+    unsigned char *random_ptr;
+    if (random_buf) {
+        random_ptr = random_buf;
+    } else {
+        random_ptr = alloca(RAND_POOL_SIZE);
+        if (!get_rand_pool(random_ptr))
             return false;
-        random_buf = my_random_buf;
     }
 
     unsigned char machine_id_digest[HASH_LEN];
-    if (!get_machine_id_hash(random_buf, machine_id_digest)) {
+    if (!get_machine_id_hash(random_ptr, machine_id_digest)) {
         fputs("cannot obtain machine id, aborting save\n", stderr);
         return false;
     }
-    char machine_id_hash[HASH_LEN*2+1];
-    memset(machine_id_hash, 0, HASH_LEN*2);
-    mem2hex(machine_id_hash, machine_id_digest, HASH_LEN);
-    machine_id_hash[sizeof(machine_id_hash)-1] = '\0';
+    char machine_id_hash[HASH_STR_LEN];
+    mem2hex(machine_id_hash, machine_id_digest, HASH_STR_LEN);
+    machine_id_hash[HASH_STR_LEN-1] = '\0';
 
     int seed_dir_fd = -1;
     int seed_fd = -1;
     FILE *seed_file = NULL;
 
-    seed_path_tmp = strdup(seed_path);
+    char *seed_path_tmp = strdup(seed_path);
+    const char *seed_dir, *seed_name;
+    char *seed_path_last_slash = strrchr(seed_path_tmp, '/');
+    if (seed_path_last_slash) {
+        *seed_path_last_slash = '\0';
+        seed_dir = seed_path_tmp;
+        seed_name = seed_path_last_slash + 1;
+    } else {
+        free(seed_path_tmp);
+        seed_path_tmp = NULL;
+        seed_dir = ".";
+        seed_name = seed_path;
+    }
+    char *seed_name_new = NULL;
 
-    seed_dir_fd = open(mydirname(seed_path_tmp), O_RDONLY | O_DIRECTORY);
+    if (asprintf(&seed_name_new, ".%s.new", seed_name) == -1) {
+        fputs("out of memory\n", stderr);
+        goto out;
+    }
+
+    seed_dir_fd = open(seed_dir, O_RDONLY | O_DIRECTORY);
     if (seed_dir_fd == -1) {
         perror("error opening seed directory");
         goto out;
     }
 
     unsigned char fs_id_digest[HASH_LEN];
-    if (!get_fs_id_hash(random_buf, fs_id_digest, seed_dir_fd)) {
+    if (!get_fs_id_hash(random_ptr, fs_id_digest, seed_dir_fd)) {
         fputs("cannot obtain machine id, aborting save\n", stderr);
-        free(seed_path_tmp);
-        return false;
+        goto out;
     }
     char fs_id_hash[HASH_LEN*2+1];
     mem2hex(fs_id_hash, fs_id_digest, HASH_LEN);
     fs_id_hash[sizeof(fs_id_hash)-1] = '\0';
-
-    strcpy(seed_path_tmp, seed_path);
-    char *seed_name = mybasename(seed_path_tmp);
-    size_t seed_name_new_len = strlen(seed_name) + 6;
-    seed_name_new = malloc(seed_name_new_len);
-    if (!seed_name_new) {
-        fputs("out of memory\n", stderr);
-        free(seed_path_tmp);
-        return false;
-    }
-    assert(seed_name_new_len < INT_MAX);
-    if ((size_t)snprintf(seed_name_new, seed_name_new_len, ".%s.new", seed_name) >= seed_name_new_len)
-        abort();
 
     seed_fd = openat(seed_dir_fd, seed_name_new, O_WRONLY | O_CREAT | O_TRUNC, 0600);
     if (seed_fd == -1) {
@@ -367,7 +372,7 @@ static bool save(const char *seed_path, unsigned char *random_buf) {
         goto err;
     }
 
-    if (fwrite(random_buf, 1, RAND_POOL_SIZE, seed_file) != RAND_POOL_SIZE
+    if (fwrite(random_ptr, 1, RAND_POOL_SIZE, seed_file) != RAND_POOL_SIZE
             || fputs(MAGIC, seed_file) == EOF
             || fputs("machine-id ", seed_file) == EOF
             || fputs(machine_id_hash, seed_file) == EOF
@@ -468,17 +473,22 @@ noreturn static void run(const char *mode, const char *seed_path) {
         if (refresh_seed) {
             unsigned char random_buf[RAND_POOL_SIZE];
             unsigned char *random_ptr = random_buf;
-            if (random_get(random_buf, sizeof(random_buf), GRND_NONBLOCK) == -1) {
-                if (errno != EAGAIN) {
-                    perror("getrandom");
-                    exit(1);
-                }
-                daemon(0, 1);
-                close(0);
-                close(1);
-                random_ptr = NULL;
+            switch (random_get(random_buf, RAND_POOL_SIZE, GRND_NONBLOCK)) {
+                case RAND_POOL_SIZE:
+                    goto save;
+                case -1:
+                    if (errno != EAGAIN) {
+                        perror("getrandom");
+                        exit(1);
+                    }
             }
-            if (!save(seed_path, random_ptr))
+            if (daemon(0, 1) == -1) {
+                perror("error daemonizing, continuing without");
+            }
+            close(0);
+            close(1);
+            random_ptr = NULL;
+save:       if (!save(seed_path, random_ptr))
                 exit_status = 1;
         }
         exit(exit_status);
@@ -505,7 +515,10 @@ noreturn static void run(const char *mode, const char *seed_path) {
         sigaction(SIGINT, &sa, NULL);
         sigaction(SIGTERM, &sa, NULL);
 
-        daemon(seed_path[0] != '/', 1);
+        if (daemon(seed_path[0] != '/', 1) == -1) {
+            perror("error daemonizing");
+            exit(1);
+        }
         close(0);
         close(1);
         // don't close stderr because we log there

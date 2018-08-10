@@ -68,7 +68,7 @@ void hash(const unsigned char salt[static SALT_LEN], unsigned char *out, const v
     sha256_final(&ctx, out);
 }
 
-void print_hash(const unsigned char digest[static HASH_LEN]) {
+static void print_hash(const unsigned char digest[static HASH_LEN]) {
 #ifdef DEBUG
     char hash[HASH_LEN*2+1];
     mem2hex(hash, digest, HASH_LEN);
@@ -92,4 +92,32 @@ bool hash_match(const unsigned char digest[static HASH_LEN], const char *arg) {
     print_hash(theirdigest);
 #endif
     return !memcmp(digest, theirdigest, HASH_LEN);
+}
+
+ssize_t random_get(void *buf, size_t buflen, unsigned int flags) {
+    memset(buf, 0, buflen);
+
+    long rv = syscall(SYS_getrandom, buf, buflen, flags);
+    if (rv == -1) {
+        if (errno == ENOSYS) {
+            fputs("getrandom returned ENOSYS. random-seed requires Linux 3.17\n", stderr);
+            exit(1);
+        }
+    } else {
+        bool all_zero = true;
+        if (buflen > 32) {
+            for (size_t i = 0; i < buflen; i++) {
+                if (((unsigned char *)buf)[i] != 0) {
+                    all_zero = false;
+                    break;
+                }
+            }
+        }
+        if (all_zero) {
+            fputs("getrandom returned all zeros, probably broken\n", stderr);
+            exit(1);
+        }
+    }
+
+    return rv;
 }

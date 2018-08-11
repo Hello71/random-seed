@@ -236,6 +236,11 @@ static bool load(FILE *seed_file) {
         }
     }
 
+    if (!linenum) {
+        fputs("seed file has no commands, assuming legacy format. disabling entropy credit\n", stderr);
+        credit_entropy = false;
+    }
+
     if (credit_entropy && !done) {
         fputs("missing done command, random seed file probably truncated. disabling entropy credit\n", stderr);
         credit_entropy = false;

@@ -58,7 +58,7 @@ static inline void usage() {
     puts("see random-seed(8) for more information.");
 }
 
-static bool get_machine_id(unsigned char **machine_id) {
+static char *get_machine_id() {
 #ifdef MACHINE_ID_PATH
     FILE *machine_id_file = fopen(MACHINE_ID_PATH, "r");
 #else
@@ -75,32 +75,29 @@ static bool get_machine_id(unsigned char **machine_id) {
 
     if (!machine_id_file) {
         perror("couldn't open any machine-id file, last error");
-        *machine_id = NULL;
-        return false;
+        return NULL;
     }
 
+    char *machine_id = NULL;
     size_t machine_id_len = 0;
-    if (getdelim((char **)machine_id, &machine_id_len, '\0', machine_id_file) == -1) {
+    if (getdelim(&machine_id, &machine_id_len, '\0', machine_id_file) == -1) {
         fputs("error reading machine id file\n", stderr);
-        *machine_id = NULL;
-        return false;
+        free(machine_id);
+        return NULL;
     }
 
-    return true;
+    return machine_id;
 }
 
 static bool get_machine_id_hash(const unsigned char salt[static SALT_LEN], unsigned char machine_id_digest[static HASH_LEN]) {
-    static unsigned char *c_machine_id;
-    static size_t c_machine_id_len;
+    static char *c_machine_id;
     if (!c_machine_id)
-        c_machine_id_len = get_machine_id(&c_machine_id);
-    if (!c_machine_id_len) {
-        free(c_machine_id);
-        c_machine_id = NULL;
+        c_machine_id = get_machine_id();
+    if (!c_machine_id)
         return false;
-    }
+
     unsigned char c_machine_id_digest[HASH_LEN];
-    hash(salt, c_machine_id_digest, c_machine_id, c_machine_id_len);
+    hash(salt, c_machine_id_digest, c_machine_id, strlen(c_machine_id));
     memcpy(machine_id_digest, c_machine_id_digest, HASH_LEN);
     return true;
 }
@@ -522,6 +519,7 @@ save:       if (!save(seed_path, random_ptr))
         close(0);
         close(1);
         // don't close stderr because we log there
+
         while (true) {
             if (sigint)
                 exit(exit_status);

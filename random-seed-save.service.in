@@ -5,7 +5,7 @@ After=systemd-remount-fs.service
 
 [Service]
 ExecStart=@sbindir@/random-seed save
-CapabilityBoundingSet=CAP_SYS_ADMIN
+CapabilityBoundingSet=
 NoNewPrivileges=yes
 PrivateDevices=yes
 PrivateNetwork=yes

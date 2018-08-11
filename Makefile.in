@@ -22,7 +22,7 @@ SRC := random-seed.c sha2.c util.c
 OBJ := $(SRC:.c=.o)
 TEST_FILE := random-seed.test
 
-all: random-seed random-seed.service
+all: random-seed random-seed.service random-seed-save.service
 
 random-seed: $(OBJ)
 
@@ -32,10 +32,10 @@ util.o: util.c util.h sha2.h
 
 sha2.o: sha2.c sha2.h
 
-random-seed.service: random-seed.service.in
+random-seed.service random-seed-save.service: Makefile
 	sed -e 's|@sbindir[@]|$(sbindir)|g' \
 	    -e 's|@default_seed_path_dir[@]|$(default_seed_path_dir)|g' \
-	    $< > $@
+	    $@.in > $@
 
 install: all
 	install -D -m755 random-seed $(DESTDIR)$(sbindir)/random-seed

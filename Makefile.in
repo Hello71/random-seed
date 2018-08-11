@@ -24,6 +24,9 @@ TEST_FILE := random-seed.test
 
 all: random-seed random-seed.service random-seed-save.service
 
+Makefile: Makefile.in configure.ac
+	$(abs_srcdir)/configure
+
 random-seed: $(OBJ)
 
 random-seed.o: random-seed.c musl-libgen-c.h util.h sha2.h

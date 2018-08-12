@@ -179,9 +179,8 @@ static bool load(FILE *seed_file) {
             fputs("premature EOF on seed file\n", stderr);
         } else if (ferror(seed_file)) {
             fputs("error reading from seed file\n", stderr);
-        } else {
-            fputs("short read from seed file\n", stderr);
         }
+        // else: we got signalled, so return to main loop to quit or whatever
         return false;
     }
 

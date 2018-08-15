@@ -1,6 +1,6 @@
 # @configure_input@
 
-VPATH = @abs_srcdir@
+VPATH = @abs_srcdir@:@abs_srcdir@/src
 abs_srcdir = @abs_srcdir@
 
 prefix = @prefix@

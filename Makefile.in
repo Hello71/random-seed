@@ -1,7 +1,7 @@
 # @configure_input@
 
-VPATH = @abs_srcdir@:@abs_srcdir@/src
-abs_srcdir = @abs_srcdir@
+VPATH = @srcdir@:@srcdir@/src
+srcdir = @srcdir@
 
 prefix = @prefix@
 exec_prefix = @exec_prefix@
@@ -14,7 +14,7 @@ systemdsystemunitdir = @systemdsystemunitdir@
 default_seed_path_dir = @default_seed_path_dir@
 
 CC = @CC@
-CFLAGS = -Wall -Wextra -pedantic @CFLAGS@ -UNDEBUG -include @abs_top_builddir@/config.h
+CFLAGS = -Wall -Wextra -pedantic @CFLAGS@ -UNDEBUG -include @abs_builddir@/config.h
 CPPFLAGS = @CPPFLAGS@
 LDFLAGS = @LDFLAGS@
 
@@ -25,7 +25,7 @@ TEST_FILE := random-seed.test
 all: random-seed random-seed.service random-seed-save.service
 
 Makefile: Makefile.in configure.ac
-	$(abs_srcdir)/configure
+	$(srcdir)/configure
 
 random-seed: $(OBJ)
 
@@ -38,15 +38,15 @@ sha2.o: sha2.c sha2.h
 random-seed.service random-seed-save.service: Makefile
 	sed -e 's|@sbindir[@]|$(sbindir)|g' \
 	    -e 's|@default_seed_path_dir[@]|$(default_seed_path_dir)|g' \
-	    $@.in > $@
+	    $(srcdir)/$@.in > $@
 
 install: all
 	install -D -m755 random-seed $(DESTDIR)$(sbindir)/random-seed
-	install -D -m644 $(abs_srcdir)/random-seed.8 $(DESTDIR)$(mandir)/man8/random-seed.8
+	install -D -m644 $(srcdir)/random-seed.8 $(DESTDIR)$(mandir)/man8/random-seed.8
 ifneq ($(systemdsystemunitdir),)
 	install -D -m644 random-seed.service $(DESTDIR)$(systemdsystemunitdir)/random-seed.service
-	install -D -m644 $(abs_srcdir)/random-seed-save.service $(DESTDIR)$(systemdsystemunitdir)/random-seed-save.service
-	install -D -m644 $(abs_srcdir)/random-seed-save.timer $(DESTDIR)$(systemdsystemunitdir)/random-seed-save.timer
+	install -D -m644 $(srcdir)/random-seed-save.service $(DESTDIR)$(systemdsystemunitdir)/random-seed-save.service
+	install -D -m644 $(srcdir)/random-seed-save.timer $(DESTDIR)$(systemdsystemunitdir)/random-seed-save.timer
 endif
 
 test: $(TEST_FILE)
@@ -56,10 +56,10 @@ $(TEST_FILE): random-seed
 	$(TEST_WRAPPER) ./random-seed load $(TEST_FILE) || [ $$? = 15 ]
 
 clean:
-	$(RM) random-seed $(OBJ) $(DEP) $(TEST_FILE)
+	$(RM) random-seed random-seed.service random-seed-save.service $(OBJ) $(DEP) $(TEST_FILE)
 
 distclean: clean
-	$(RM) -r aclocal.m4 autom4te.cache config.h config.h.in 'config.h.in~' config.log config.status configure Makefile
+	$(RM) -r autom4te.cache config.h config.log config.status Makefile
 
 .PHONY: all install test clean random-seed.test
 .INTERMEDIATE: $(TEST_FILE)

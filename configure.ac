@@ -14,8 +14,6 @@ AS_IF([test "$ac_cv_prog_cc_c99" = no],
 
 CPPFLAGS="${CPPFLAGS+$CPPFLAGS }-D_GNU_SOURCE -D_DEFAULT_SOURCE -D_POSIX_C_SOURCE=200809L"
 
-PKG_CHECK_VAR(systemdsystemunitdir, systemd, systemdsystemunitdir)
-
 AC_ARG_ENABLE(debug,
               AC_HELP_STRING(--enable-debug, [enable debug output [no]]),
               [enable_debug=$enableval],
@@ -49,8 +47,10 @@ AC_DEFINE_UNQUOTED(DEFAULT_SEED_PATH, "$default_seed_path", [default seed path])
 default_seed_path_dir=${default_seed_path%/*}
 AC_SUBST(default_seed_path_dir)
 
-AX_CHECK_COMPILE_FLAG(-Wall, [CFLAGS="-Wall${CFLAGS+ $CFLAGS}"])
-AX_CHECK_COMPILE_FLAG(-Wextra, [CFLAGS="-Wextra${CFLAGS+ $CFLAGS}"])
-AX_CHECK_COMPILE_FLAG(-pedantic, [CFLAGS="-pedantic${CFLAGS+ $CFLAGS}"])
+EXTRA_CFLAGS=
+AX_CHECK_COMPILE_FLAG(-Wall, [EXTRA_CFLAGS="-Wall${EXTRA_CFLAGS+ $EXTRA_CFLAGS}"])
+AX_CHECK_COMPILE_FLAG(-Wextra, [EXTRA_CFLAGS="-Wextra${EXTRA_CFLAGS+ $EXTRA_CFLAGS}"])
+AX_CHECK_COMPILE_FLAG(-pedantic, [EXTRA_CFLAGS="-pedantic${EXTRA_CFLAGS+ $EXTRA_CFLAGS}"])
+AC_SUBST(EXTRA_CFLAGS)
 
 AC_OUTPUT(Makefile)

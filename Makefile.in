@@ -1,10 +1,10 @@
 # SPDX-License-Identifier: BSD-3-Clause
 # @configure_input@
 
-VPATH = @srcdir@:@srcdir@/src
+MAKEFLAGS += -R -r
+
 srcdir = @srcdir@
 abs_builddir = @abs_builddir@
-
 prefix = @prefix@
 exec_prefix = @exec_prefix@
 datarootdir = @datarootdir@
@@ -16,11 +16,13 @@ systemdsystemunitdir = @systemdsystemunitdir@
 default_seed_path_dir = @default_seed_path_dir@
 
 CC = @CC@
-CFLAGS = @CFLAGS@ -UNDEBUG -I$(abs_builddir)
+CFLAGS = @EXTRA_CFLAGS@ @CFLAGS@
+override CFLAGS += -UNDEBUG -I$(abs_builddir)
 CPPFLAGS = @CPPFLAGS@
 LDFLAGS = @LDFLAGS@
 
-SRC := random-seed.c sha2.c util.c
+VPATH := $(srcdir)
+SRC := src/id.c src/random-seed.c src/sha2.c src/util.c
 OBJ := $(SRC:.c=.o)
 TEST_FILE := random-seed.test
 
@@ -30,15 +32,21 @@ $(srcdir)/configure: $(srcdir)/aclocal.m4 $(srcdir)/autogen.sh $(srcdir)/configu
 	cd $(srcdir); ./autogen.sh
 
 Makefile: $(srcdir)/configure Makefile.in
-	$(srcdir)/configure
+	unset CFLAGS; $(srcdir)/configure
 
 random-seed: $(OBJ)
+	$(CC) $(LDFLAGS) $^ $(LDLIBS) -o $@
 
-random-seed.o: random-seed.c musl-libgen-c.h util.h sha2.h
+%.o: %.c
+	$(CC) $(CFLAGS) $(CPPFLAGS) -c -o $@ $<
 
-util.o: util.c util.h sha2.h
+src/random-seed.o: src/random-seed.c src/id.h src/musl-libgen-c.h src/sha2.h src/util.h
 
-sha2.o: sha2.c sha2.h
+src/util.o: src/util.c src/util.h
+
+src/sha2.o: src/sha2.c src/sha2.h
+
+src/id.o: src/id.c src/id.h src/sha2.h
 
 systemd/random-seed.service systemd/random-seed-save.service: Makefile
 .in:
@@ -62,11 +70,11 @@ $(TEST_FILE): random-seed
 	$(TEST_WRAPPER) ./random-seed load $(TEST_FILE) || [ $$? = 15 ]
 
 clean:
-	$(RM) random-seed systemd/random-seed.service systemd/random-seed-save.service $(OBJ) $(DEP) $(TEST_FILE)
+	rm -f random-seed systemd/random-seed.service systemd/random-seed-save.service $(OBJ) $(DEP) $(TEST_FILE)
 	rmdir systemd 2>/dev/null || true
 
 distclean: clean
-	$(RM) -r autom4te.cache config.cache config.h config.log config.status Makefile
+	rm -f -r autom4te.cache config.cache config.h config.log config.status Makefile
 
 .PHONY: all install test clean random-seed.test
 .INTERMEDIATE: $(TEST_FILE)

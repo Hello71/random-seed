@@ -18,6 +18,8 @@
 #include <unistd.h>
 
 #include "config.h"
+
+#include "id.h"
 #include "musl-libgen-c.h"
 #include "util.h"
 
@@ -46,104 +48,55 @@ static inline void usage() {
     puts("see random-seed(8) for more information.");
 }
 
-static char *get_machine_id() {
-#ifdef MACHINE_ID_PATH
-    FILE *machine_id_file = fopen(MACHINE_ID_PATH, "r");
+static bool run_seed_file_cmd(const char *cmd, const unsigned char *salt, FILE *seed_file) {
+#define HASH_ID_CMD(my_cmd, type, fn, hash_access, ...) \
+    do { \
+        if (!streq(cmd, my_cmd)) \
+            break; \
+        char *arg = strtok(NULL, " \t"); \
+        if (!arg) { \
+            fputs("error parsing seed file: expected argument " \
+                  "to '" my_cmd "'\n", stderr); \
+            return false; \
+        } \
+        type fn ## _buf; \
+        unsigned char fn ## _hash[HASH_LEN]; \
+        size_t sz = fn(&fn ## _buf, ##__VA_ARGS__); \
+        if (sz == 0) { \
+            fputs("error getting " my_cmd " hash\n", stderr); \
+            return false; \
+        } \
+        hash(salt, fn ## _hash, hash_access fn ## _buf, sz); \
+        unsigned char theirdigest[HASH_LEN]; \
+        if (hex2mem(theirdigest, HASH_LEN, arg) == 0) { \
+            fputs("error decoding hex hash\n", stderr); \
+            exit(1); \
+        } \
+        if (memcmp(fn ## _hash, theirdigest, HASH_LEN)) { \
+            fputs(my_cmd " hash does not match\n", stderr); \
+            return false; \
+        } \
+        return true; \
+    } while (0)
+
+    HASH_ID_CMD("machine-id", char *, get_machine_id, );
+    HASH_ID_CMD("fs-id", fsid_t, get_fs_id, &, fileno(seed_file));
+#if defined(HAVE_UDEV) || defined(HAVE_UTIL_LINUX)
+    HASH_ID_CMD("fs-uuid", char *, get_fs_uuid, fileno(seed_file));
 #else
-    const char *etc_machine_id = "/etc/machine-id";
-    const char *var_lib_dbus_machine_id = "/var/lib/dbus/machine-id";
-    FILE *machine_id_file = fopen(etc_machine_id, "r");
-    if (!machine_id_file) {
-        if (errno != ENOENT)
-            fprintf(stderr, "error opening %s: %s, trying %s\n",
-                    etc_machine_id, strerror(errno), var_lib_dbus_machine_id);
-        machine_id_file = fopen(var_lib_dbus_machine_id, "r");
+    if (streq(cmd, "fs-uuid")) {
+        fputs("error: fs-uuid not supported by this random-seed\n", stderr);
+        return false;
     }
 #endif
-
-    if (!machine_id_file) {
-        perror("couldn't open any machine-id file, last error");
-        return NULL;
-    }
-
-    char *machine_id = NULL;
-    size_t machine_id_len = 0;
-    if (getdelim(&machine_id, &machine_id_len, '\0', machine_id_file) == -1) {
-        fputs("error reading machine id file\n", stderr);
-        free(machine_id);
-        return NULL;
-    }
-
-    return machine_id;
-}
-
-static bool get_machine_id_hash(const unsigned char salt[static SALT_LEN], unsigned char machine_id_digest[static HASH_LEN]) {
-    static char *c_machine_id;
-    if (!c_machine_id)
-        c_machine_id = get_machine_id();
-    if (!c_machine_id)
-        return false;
-
-    unsigned char c_machine_id_digest[HASH_LEN];
-    hash(salt, c_machine_id_digest, c_machine_id, strlen(c_machine_id));
-    memcpy(machine_id_digest, c_machine_id_digest, HASH_LEN);
-    return true;
-}
-
-static inline bool get_fs_id_hash(const unsigned char salt[static SALT_LEN], unsigned char fsid_digest[static HASH_LEN], int seed_fd) {
-    struct statfs statfs_buf;
-    if (fstatfs(seed_fd, &statfs_buf) == -1) {
-        fprintf(stderr, "error statfs seed file: %s, "
-                "disabling entropy credit\n", strerror(errno));
+#ifdef HAVE_UDEV
+    HASH_ID_CMD("drive-id", char *, get_drive_id, fileno(seed_file));
+#else
+    if (streq(cmd, "drive-id")) {
+        fputs("error: drive-id not supported by this random-seed\n", stderr);
         return false;
     }
-    hash(salt, fsid_digest, &statfs_buf.f_fsid, sizeof(statfs_buf.f_fsid));
-    return true;
-}
-
-static bool run_seed_file_cmd(const char *cmd, const unsigned char *salt, FILE *seed_file) {
-    char *arg;
-    if (streq(cmd, "machine-id")) {
-        arg = strtok(NULL, " \t");
-        if (!arg) {
-            fputs("error parsing seed file: expected argument "
-                  "to 'machine-id'\n", stderr);
-            return false;
-        }
-        unsigned char machine_id_hash[HASH_LEN];
-        if (!get_machine_id_hash(salt, machine_id_hash)) {
-            fputs("error getting machine id hash, disabling entropy credit\n",
-                  stderr);
-            return false;
-        }
-
-        if (!hash_match(machine_id_hash, arg)) {
-            fputs("machine-id does not match, disabling entropy credit\n",
-                  stderr);
-            return false;
-        }
-        return true;
-    }
-
-    if (streq(cmd, "fs-id")) {
-        arg = strtok(NULL, " \t");
-        if (!arg) {
-            fputs("error parsing seed file: expected argument to 'fs-id'\n", stderr);
-            return false;
-        }
-        unsigned char fs_id_hash[HASH_LEN];
-        if (!get_fs_id_hash(salt, fs_id_hash, fileno(seed_file))) {
-            fputs("error getting fs id hash, disabling entropy credit\n", stderr);
-            return false;
-        }
-
-        if (!hash_match(fs_id_hash, arg)) {
-            fputs("fs id does not match, disabling entropy credit\n", stderr);
-            return false;
-        }
-        return true;
-    }
-
+#endif
     fprintf(stderr, "error parsing seed file: unsupported command: %s\n", cmd);
     return false;
 }
@@ -302,14 +255,21 @@ static bool save(const char *seed_path, unsigned char *random_buf) {
             return false;
     }
 
-    unsigned char machine_id_digest[HASH_LEN];
-    if (!get_machine_id_hash(random_ptr, machine_id_digest)) {
-        fputs("cannot obtain machine id, aborting save\n", stderr);
-        return false;
-    }
-    char machine_id_hash[HASH_STR_LEN];
-    mem2hex(machine_id_hash, machine_id_digest, HASH_STR_LEN);
-    machine_id_hash[HASH_STR_LEN-1] = '\0';
+#define GET_HASH_STR(type, hash_access, name, ...) \
+    char name ## _hash[HASH_STR_LEN]; \
+    do { \
+        type name ## _buf; \
+        size_t name ## _len = get_ ## name(&name ## _buf, ##__VA_ARGS__); \
+        if (!name ## _len) { \
+            fputs("error obtaining " #name " \n", stderr); \
+            return false; \
+        } \
+        unsigned char name ## _digest[HASH_LEN]; \
+        hash(random_ptr, name ## _digest, hash_access name ## _buf, name ## _len); \
+        mem2hex(name ## _hash, name ## _digest, HASH_LEN); \
+    } while (0)
+
+    GET_HASH_STR(char *, , machine_id);
 
     int seed_dir_fd = -1;
     int seed_fd = -1;
@@ -341,14 +301,7 @@ static bool save(const char *seed_path, unsigned char *random_buf) {
         goto out;
     }
 
-    unsigned char fs_id_digest[HASH_LEN];
-    if (!get_fs_id_hash(random_ptr, fs_id_digest, seed_dir_fd)) {
-        fputs("cannot obtain machine id, aborting save\n", stderr);
-        goto out;
-    }
-    char fs_id_hash[HASH_LEN*2+1];
-    mem2hex(fs_id_hash, fs_id_digest, HASH_LEN);
-    fs_id_hash[sizeof(fs_id_hash)-1] = '\0';
+    GET_HASH_STR(fsid_t, &, fs_id, seed_dir_fd);
 
     seed_fd = openat(seed_dir_fd, seed_name_new, O_WRONLY | O_CREAT | O_TRUNC, 0600);
     if (seed_fd == -1) {

@@ -12,9 +12,12 @@ project instead.
 
 random-seed requires the following to compile:
 
-- a gcc-compatible compiler (clang is fine)
-- GNU make (BSD make is not fine)
-- Bourne-like sh (autoconf compatible, i.e. probably all of them)
+- a sufficiently gcc compatible compiler. clang is fine, icc probably works.
+- GNU make. BSD make is not supported.
+- sh. dash works.
+
+When compiling from git, autoconf, aclocal, and autoconf-archive are required.
+aclocal is provided by the automake package on most operating systems. [1]
 
 random-seed also supports linking with libudev or libmount and libblkid. It is
 highly recommended to enable libudev if your target platform includes udevd
@@ -32,14 +35,12 @@ probably also do not use systemd or dbus, so you will probably not have a
 machine ID. In this case, random-seed will never credit the entropy, so you may
 as well use a "dd if=random-seed of=/dev/urandom" script.
 
-When compiling from git, autoconf, aclocal, and autoconf-archive are required.
-aclocal is provided by the automake package on most operating systems. [1]
-
 random-seed is Linux-specific, as it is my understanding that other operating
 systems are either not commonly imaged (e.g. BSDs) or have official tools for
 system image preparation (e.g. sysprep for Windows). However, it should be
 reasonably easy to port by simply adjusting the paths and changing getrandom to
-/dev/random.
+/dev/random. Other operating systems would be better served by providing an
+official sysprep program though.
 
 random-seed supports a daemonize mode. This is recommended on systems without
 a centralized timer synchronization mechanism similar to Android or systemd.

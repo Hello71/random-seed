@@ -8,8 +8,8 @@ config.status
 configure
 /Makefile
 
-/random-seed.service
-/random-seed-save.service
+/systemd/random-seed.service
+/systemd/random-seed-save.service
 /random-seed
 /random-seed.test
 *.o

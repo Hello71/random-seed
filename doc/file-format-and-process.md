@@ -26,5 +26,13 @@ argument.
 Check that calling statfs(2) on the random seed file returns a `f_fsid` that
 when hashed, matches the argument.
 
+## fs-uuid
+Check that the UUID of the random seed file system, when hashed as a string,
+matches the argument.
+
+## drive-id
+Check that the ID as determined by udev of the random seed file system, when
+hashed as a string, matches the argument.
+
 ## done
 End of mandatory commands.

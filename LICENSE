@@ -1,7 +1,13 @@
 This software is a combination of components distributed under the 3-clause
 BSD, MIT, and FSF unlimited licenses. Note that libudev, libblkid, and libmount
 are LGPL licensed, so when random-seed is built against those, the terms of the
-LGPL apply for those libraries.
+LGPL apply for those libraries. random-seed copies certain filesystem
+identifier constants from the Linux kernel in src/fsid.c. It is believed
+that the use of these constants does not constitute copyright infringement
+under copyright law in the United States per Sega v. Accolade, and likely fall
+under similar compatibility rules in other jurisdictions. It is also believed
+that these constants are covered under the "Linux syscall note" exempting them
+from the ordinary GPL license.
 
 All files that neither have copyright notices at the top nor are listed below
 are distributed under the 3-clause BSD license:

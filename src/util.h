@@ -1,5 +1,7 @@
-#ifndef UTIL_H
-#define UTIL_H
+// SPDX-License-Identifier: BSD-3-Clause
+
+#ifndef RANDOM_SEED_UTIL_H
+#define RANDOM_SEED_UTIL_H
 
 #include <errno.h>
 #include <stdbool.h>

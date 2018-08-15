@@ -1,16 +1,14 @@
 random-seed is a random seed management program.  In contrast with other random
 seed implementations, random-seed will credit the random seed to the kernel
 entropy count.  It attempts to prevent inadvertent random seed sharing by
-checking that certain system identifiers, such as the machine ID and filesystem
+checking that certain system identifiers such as the machine ID and filesystem
 ID have not changed between a save and load.  If these identifiers do not
 match, random-seed will still load the random seed, but will not credit the
 entropy.
 
-It is my understanding that other operating systems are either not commonly
-imaged (e.g. BSDs) or have official tools for system image preparation (e.g.
-sysprep for Windows). Therefore, random-seed is Linux specific. However, it
-should be reasonably easy to port by simply adjusting the paths and changing
-getrandom to /dev/random.
+random-seed is intended for distribution use. For a system that is
+administratively guaranteed not to be cloned, consider the random-seed-basic
+project instead.
 
 random-seed requires the following to compile:
 
@@ -18,8 +16,35 @@ random-seed requires the following to compile:
 - GNU make (BSD make is not fine)
 - Bourne-like sh (autoconf compatible, i.e. probably all of them)
 
-If compiling from git, autoconf is also required. random-seed does not use
-automake, gettext, or libtool.
+random-seed also supports linking with libudev or libmount and libblkid. It is
+highly recommended to enable libudev if your target platform includes udevd
+(eudev is supported), as it allows detection of the hard drive ID. Otherwise,
+it is highly recommended to enable libmount and libblkid, as these allow
+reliable detection of the file system UUID. It is assumed that most GNU/Linux
+systems will include the util-linux package that contains these libraries, so
+that should cover almost everybody. Even so, if neither of these are compiled
+in, random-seed will fall back on the statfs(2) system call and use the f_fsid
+field to identify the file system, if the file system type is btrfs, ext2/3/4,
+JFS, NTFS, reiserfs, or UBIFS. If the file system type is none of these, and
+none of the above libraries have been compiled in, random-seed will only use
+the machine ID for cloning detection. However, if you do not have libudev, you
+probably also do not use systemd or dbus, so you will probably not have a
+machine ID. In this case, random-seed will never credit the entropy, so you may
+as well use a "dd if=random-seed of=/dev/urandom" script.
 
-random-seed requires Linux 3.11 or higher supporting the getrandom(2) system
-call.
+When compiling from git, autoconf, aclocal, and autoconf-archive are required.
+aclocal is provided by the automake package on most operating systems. [1]
+
+random-seed is Linux-specific, as it is my understanding that other operating
+systems are either not commonly imaged (e.g. BSDs) or have official tools for
+system image preparation (e.g. sysprep for Windows). However, it should be
+reasonably easy to port by simply adjusting the paths and changing getrandom to
+/dev/random.
+
+random-seed supports a daemonize mode. This is recommended on systems without
+a centralized timer synchronization mechanism similar to Android or systemd.
+random-seed uses under 100 KB of RAM and negligible CPU when daemonized.
+
+[1] Automake has a "Future of aclocal" section in its manual. This section has
+contained the text "aclocal is expected to disappear" since its inception in
+2003, more than 15 years ago as of writing.

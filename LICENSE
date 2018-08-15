@@ -1,5 +1,7 @@
 This software is a combination of components distributed under the 3-clause
-BSD, MIT, and FSF unlimited licenses.
+BSD, MIT, and FSF unlimited licenses. Note that libudev, libblkid, and libmount
+are LGPL licensed, so when random-seed is built against those, the terms of the
+LGPL apply for those libraries.
 
 All files that neither have copyright notices at the top nor are listed below
 are distributed under the 3-clause BSD license:
@@ -33,7 +35,9 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 ---
 
-Autoconf generated files are distributed under the FSF unlimited license located in their respective files (as of writing, aclocal.m4, config.status, configure).
+Autoconf generated files are distributed under the FSF unlimited license
+located in their respective files (as of writing, aclocal.m4, config.status,
+configure).
 
 ---
 

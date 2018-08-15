@@ -1,7 +1,9 @@
+# SPDX-License-Identifier: BSD-3-Clause
 # @configure_input@
 
 VPATH = @srcdir@:@srcdir@/src
 srcdir = @srcdir@
+abs_builddir = @abs_builddir@
 
 prefix = @prefix@
 exec_prefix = @exec_prefix@
@@ -14,7 +16,7 @@ systemdsystemunitdir = @systemdsystemunitdir@
 default_seed_path_dir = @default_seed_path_dir@
 
 CC = @CC@
-CFLAGS = -Wall -Wextra -pedantic @CFLAGS@ -UNDEBUG -include @abs_builddir@/config.h
+CFLAGS = @CFLAGS@ -UNDEBUG -I$(abs_builddir)
 CPPFLAGS = @CPPFLAGS@
 LDFLAGS = @LDFLAGS@
 
@@ -22,9 +24,12 @@ SRC := random-seed.c sha2.c util.c
 OBJ := $(SRC:.c=.o)
 TEST_FILE := random-seed.test
 
-all: random-seed random-seed.service random-seed-save.service
+all: random-seed systemd/random-seed.service systemd/random-seed-save.service
 
-Makefile: Makefile.in configure.ac
+$(srcdir)/configure: $(srcdir)/aclocal.m4 $(srcdir)/autogen.sh $(srcdir)/configure.ac
+	cd $(srcdir); ./autogen.sh
+
+Makefile: $(srcdir)/configure Makefile.in
 	$(srcdir)/configure
 
 random-seed: $(OBJ)
@@ -35,18 +40,19 @@ util.o: util.c util.h sha2.h
 
 sha2.o: sha2.c sha2.h
 
-random-seed.service random-seed-save.service: Makefile
+systemd/random-seed.service systemd/random-seed-save.service: Makefile
+.in:
 	sed -e 's|@sbindir[@]|$(sbindir)|g' \
 	    -e 's|@default_seed_path_dir[@]|$(default_seed_path_dir)|g' \
 	    $(srcdir)/$@.in > $@
 
 install: all
 	install -D -m755 random-seed $(DESTDIR)$(sbindir)/random-seed
-	install -D -m644 $(srcdir)/random-seed.8 $(DESTDIR)$(mandir)/man8/random-seed.8
+	install -D -m644 $(srcdir)/doc/random-seed.8 $(DESTDIR)$(mandir)/man8/random-seed.8
 ifneq ($(systemdsystemunitdir),)
-	install -D -m644 random-seed.service $(DESTDIR)$(systemdsystemunitdir)/random-seed.service
-	install -D -m644 $(srcdir)/random-seed-save.service $(DESTDIR)$(systemdsystemunitdir)/random-seed-save.service
-	install -D -m644 $(srcdir)/random-seed-save.timer $(DESTDIR)$(systemdsystemunitdir)/random-seed-save.timer
+	install -D -m644 systemd/random-seed.service $(DESTDIR)$(systemdsystemunitdir)/random-seed.service
+	install -D -m644 $(srcdir)/systemd/random-seed-save.service $(DESTDIR)$(systemdsystemunitdir)/random-seed-save.service
+	install -D -m644 $(srcdir)/systemd/random-seed-save.timer $(DESTDIR)$(systemdsystemunitdir)/random-seed-save.timer
 endif
 
 test: $(TEST_FILE)
@@ -56,10 +62,11 @@ $(TEST_FILE): random-seed
 	$(TEST_WRAPPER) ./random-seed load $(TEST_FILE) || [ $$? = 15 ]
 
 clean:
-	$(RM) random-seed random-seed.service random-seed-save.service $(OBJ) $(DEP) $(TEST_FILE)
+	$(RM) random-seed systemd/random-seed.service systemd/random-seed-save.service $(OBJ) $(DEP) $(TEST_FILE)
+	rmdir systemd 2>/dev/null || true
 
 distclean: clean
-	$(RM) -r autom4te.cache config.h config.log config.status Makefile
+	$(RM) -r autom4te.cache config.cache config.h config.log config.status Makefile
 
 .PHONY: all install test clean random-seed.test
 .INTERMEDIATE: $(TEST_FILE)

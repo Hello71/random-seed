@@ -1,5 +1,10 @@
+# SPDX-License-Identifier: BSD-3-Clause
+
 AC_INIT(random-seed, 0.1)
+AC_CONFIG_MACRO_DIRS([m4])
+
 AC_LANG(C)
+
 AC_CONFIG_HEADERS(config.h)
 AC_PROG_CC
 
@@ -7,7 +12,7 @@ AC_PROG_CC_C99
 AS_IF([test "$ac_cv_prog_cc_c99" = no],
       [AC_MSG_ERROR([a C99 compatible compiler is required])])
 
-CPPFLAGS="$CPPFLAGS -D_GNU_SOURCE -D_DEFAULT_SOURCE -D_POSIX_C_SOURCE=200809L"
+CPPFLAGS="${CPPFLAGS+$CPPFLAGS }-D_GNU_SOURCE -D_DEFAULT_SOURCE -D_POSIX_C_SOURCE=200809L"
 
 PKG_CHECK_VAR(systemdsystemunitdir, systemd, systemdsystemunitdir)
 
@@ -43,5 +48,9 @@ AC_ARG_WITH([default-seed-path],
 AC_DEFINE_UNQUOTED(DEFAULT_SEED_PATH, "$default_seed_path", [default seed path])
 default_seed_path_dir=${default_seed_path%/*}
 AC_SUBST(default_seed_path_dir)
+
+AX_CHECK_COMPILE_FLAG(-Wall, [CFLAGS="-Wall${CFLAGS+ $CFLAGS}"])
+AX_CHECK_COMPILE_FLAG(-Wextra, [CFLAGS="-Wextra${CFLAGS+ $CFLAGS}"])
+AX_CHECK_COMPILE_FLAG(-pedantic, [CFLAGS="-pedantic${CFLAGS+ $CFLAGS}"])
 
 AC_OUTPUT(Makefile)

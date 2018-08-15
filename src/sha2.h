@@ -1,4 +1,5 @@
-/*
+/* SPDX-License-Identifier: BSD-3-Clause
+ *
  * FIPS 180-2 SHA-224/256/384/512 implementation
  * Last update: 02/02/2007
  * Issue date:  04/30/2005

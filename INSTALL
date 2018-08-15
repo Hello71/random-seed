@@ -1,4 +1,4 @@
-Use ./configure; make; sudo make test; sudo make install.
+Use ./configure; make; make test; sudo make install.
 
 If building from git, run ./autogen.sh first.
 

@@ -1,4 +1,5 @@
-/*
+/* SPDX-License-Identifier: MIT
+ *
  * Copied from musl.
  *
  * Copyright © 2005-2014 Rich Felker, et al.

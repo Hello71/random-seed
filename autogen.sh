@@ -3,8 +3,8 @@
 
 set -e
 
-autoheader &
-aclocal -I m4 --install
-autoconf
+{ ${AUTOHEADER:-autoheader} && touch config.h; } &
+${ACLOCAL:-aclocal} -I m4 --install && touch aclocal.m4
+${AUTOCONF:-autoconf} && touch configure
 
 wait

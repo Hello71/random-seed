@@ -49,7 +49,7 @@ static inline void usage() {
 }
 
 static bool run_seed_file_cmd(const char *cmd, const unsigned char *salt, FILE *seed_file) {
-#define HASH_ID_CMD(my_cmd, type, fn, hash_access, ...) \
+#define HASH_ID_CMD(my_cmd, type, fn, data_accessor, ...) \
     do { \
         if (!streq(cmd, my_cmd)) \
             break; \
@@ -66,7 +66,7 @@ static bool run_seed_file_cmd(const char *cmd, const unsigned char *salt, FILE *
             fputs("error getting " my_cmd " hash\n", stderr); \
             return false; \
         } \
-        hash(salt, fn ## _hash, hash_access fn ## _buf, sz); \
+        hash(salt, fn ## _hash, data_accessor fn ## _buf, sz); \
         unsigned char theirdigest[HASH_LEN]; \
         if (hex2mem(theirdigest, HASH_LEN, arg) == 0) { \
             fputs("error decoding hex hash\n", stderr); \
@@ -81,7 +81,7 @@ static bool run_seed_file_cmd(const char *cmd, const unsigned char *salt, FILE *
 
     HASH_ID_CMD("machine-id", char *, get_machine_id, );
     HASH_ID_CMD("fs-id", fsid_t, get_fs_id, &, fileno(seed_file));
-#if defined(HAVE_UDEV) || defined(HAVE_UTIL_LINUX)
+#if defined(HAVE_LIBUDEV) || defined(HAVE_UTIL_LINUX)
     HASH_ID_CMD("fs-uuid", char *, get_fs_uuid, fileno(seed_file));
 #else
     if (streq(cmd, "fs-uuid")) {
@@ -89,7 +89,7 @@ static bool run_seed_file_cmd(const char *cmd, const unsigned char *salt, FILE *
         return false;
     }
 #endif
-#ifdef HAVE_UDEV
+#ifdef HAVE_LIBUDEV
     HASH_ID_CMD("drive-id", char *, get_drive_id, fileno(seed_file));
 #else
     if (streq(cmd, "drive-id")) {
@@ -105,7 +105,7 @@ static bool load(FILE *seed_file) {
     bool credit_entropy = true;
 
     struct rand_pool_info_ rpi = {
-        .entropy_count = RAND_POOL_SIZE * 8,
+        .entropy_count = RAND_POOL_SIZE * CHAR_BIT,
         .buf_size = RAND_POOL_SIZE,
         .buf = { 0 }
     };
@@ -302,6 +302,12 @@ static bool save(const char *seed_path, unsigned char *random_buf) {
     }
 
     GET_HASH_STR(fsid_t, &, fs_id, seed_dir_fd);
+#ifdef HAVE_LIBUDEV
+    GET_HASH_STR(char *, , drive_id, seed_dir_fd);
+#endif
+#if defined(HAVE_LIBUDEV) || defined(HAVE_UTIL_LINUX)
+    GET_HASH_STR(char *, , fs_uuid, seed_dir_fd);
+#endif
 
     seed_fd = openat(seed_dir_fd, seed_name_new, O_WRONLY | O_CREAT | O_TRUNC, 0600);
     if (seed_fd == -1) {

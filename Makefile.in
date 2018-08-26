@@ -91,8 +91,5 @@ clean:
 	rm -f random-seed random-seed.c random-seed.d random-seed.o systemd/random-seed.service systemd/random-seed-save.service $(OBJ) $(DEP) $(TEST_FILE)
 	rmdir systemd 2>/dev/null || true
 
-distclean: clean
-	rm -f -r autom4te.cache config.cache config.h config.log config.status Makefile
-
 .PHONY: all install test clean random-seed.test
 .INTERMEDIATE: $(TEST_FILE)

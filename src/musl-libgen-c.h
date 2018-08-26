@@ -24,8 +24,7 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-#ifndef MUSL_LIBGEN_H
-#define MUSL_LIBGEN_H
+#pragma once
 
 #include <string.h>
 
@@ -50,5 +49,3 @@ static inline char *mydirname(char *s)
 	s[i+1] = 0;
 	return s;
 }
-
-#endif

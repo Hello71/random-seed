@@ -3,6 +3,7 @@
 
 MAKEFLAGS += -R -r
 
+UNITY = @UNITY@
 srcdir = @srcdir@
 abs_builddir = @abs_builddir@
 prefix = @prefix@
@@ -16,15 +17,16 @@ systemdsystemunitdir = @systemdsystemunitdir@
 default_seed_path_dir = @default_seed_path_dir@
 
 CC = @CC@
-CFLAGS = @EXTRA_CFLAGS@ @CFLAGS@
+CFLAGS = @CFLAGS@
 override CFLAGS += -UNDEBUG -I$(abs_builddir)
 CPPFLAGS = @CPPFLAGS@
 LDFLAGS = @LDFLAGS@
 LIBS = @LIBS@
 
 VPATH := $(srcdir)
-SRC := src/id.c src/random-seed.c src/sha2.c src/util.c
+SRC := src/id.c src/load.c src/main.c src/random-seed.c src/save.c src/sha2.c src/util.c
 OBJ := $(SRC:.c=.o)
+DEP := $(SRC:.c=.d)
 TEST_FILE := random-seed.test
 
 all: random-seed systemd/random-seed.service systemd/random-seed-save.service
@@ -41,22 +43,31 @@ Makefile: config.status Makefile.in
 config.h: config.status config.h.in
 	./config.status
 
+ifneq ($(UNITY),)
+random-seed: random-seed.o
+	$(CC) $(LDFLAGS) $^ $(LIBS) -o $@
+
+random-seed.o: CPPFLAGS+=-I$(srcdir)/src
+
+random-seed.c: Makefile
+	for f in $(SRC); do \
+	    printf '#include "%s"\n' "$$f"; \
+	done > $@
+
+-include random-seed.d
+else
 random-seed: $(OBJ)
 	$(CC) $(LDFLAGS) $^ $(LIBS) -o $@
 
+-include $(DEP)
+endif
+
 %.o: %.c
+	@mkdir -p $(@D)
 	$(CC) $(CFLAGS) $(CPPFLAGS) -c -o $@ $<
 
-src/random-seed.o: src/random-seed.c src/id.h src/musl-libgen-c.h src/sha2.h src/util.h
-
-src/util.o: src/util.c src/util.h
-
-src/sha2.o: src/sha2.c src/sha2.h
-
-src/id.o: src/id.c src/id.h src/sha2.h
-
 %: %.in Makefile
-	mkdir -p $(@D)
+	@mkdir -p $(@D)
 	sed -e 's|@sbindir[@]|$(sbindir)|g' \
 	    -e 's|@default_seed_path_dir[@]|$(default_seed_path_dir)|g' \
 	    $< > $@
@@ -77,7 +88,7 @@ $(TEST_FILE): random-seed
 	$(TEST_WRAPPER) ./random-seed load $(TEST_FILE) || [ $$? = 15 ]
 
 clean:
-	rm -f random-seed systemd/random-seed.service systemd/random-seed-save.service $(OBJ) $(DEP) $(TEST_FILE)
+	rm -f random-seed random-seed.c random-seed.d random-seed.o systemd/random-seed.service systemd/random-seed-save.service $(OBJ) $(DEP) $(TEST_FILE)
 	rmdir systemd 2>/dev/null || true
 
 distclean: clean

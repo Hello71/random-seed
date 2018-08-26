@@ -6,11 +6,13 @@ config.h.in~
 config.log
 config.status
 configure
+/m4
 /Makefile
 
 /systemd/random-seed.service
 /systemd/random-seed-save.service
 /random-seed
 /random-seed.test
+/random-seed.c
 *.o
 *.d

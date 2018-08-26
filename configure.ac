@@ -4,26 +4,23 @@ AC_INIT(random-seed, 0.1)
 AC_CONFIG_MACRO_DIRS([m4])
 
 AC_LANG(C)
-
-AC_CONFIG_HEADERS(config.h)
 AC_PROG_CC
-
 AC_PROG_CC_C99
-AS_IF([test "$ac_cv_prog_cc_c99" = no],
-      [AC_MSG_ERROR([a C99 compatible compiler is required])])
+AS_IF([test "$ac_cv_prog_cc_c99" = no], [
+    AC_MSG_ERROR([a C99 compatible compiler is required])
+])
 
-CPPFLAGS="${CPPFLAGS+$CPPFLAGS }-D_GNU_SOURCE -D_DEFAULT_SOURCE -D_POSIX_C_SOURCE=200809L"
-
-AC_ARG_ENABLE(debug,
-    AC_HELP_STRING(--enable-debug, [enable debug output [no]]),
-    [enable_debug=$enableval],
-    [enable_debug=no]
+AC_ARG_ENABLE(unity,
+    AC_HELP_STRING(--enable-unity, [enable unity build (similar to sqlite amalgamation) [yes]]),
+    [enable_unity=$enableval],
+    [enable_unity=yes]
 )
-AS_CASE([$enable_debug],
-    [yes], [AC_DEFINE(DEBUG, [], [enable debug output])],
-    [no], [],
-    [AC_MSG_ERROR([invalid argument to --enable-debug])]
+AS_CASE([$enable_unity],
+    [no], [UNITY=],
+    [yes], [UNITY=1],
+    [AC_MSG_ERROR([invalid argument to --enable-unity])]
 )
+AC_SUBST(UNITY)
 
 AC_ARG_WITH(udev,
     AC_HELP_STRING(--with-udev, [enable libudev support [auto]]),
@@ -32,68 +29,82 @@ AC_ARG_WITH(udev,
 )
 AS_CASE([$with_udev],
     [no], [],
-    [yes], [ PKG_CHECK_MODULES(LIBUDEV, libudev, [WITH_UDEV=1]) ],
-    [auto], [ PKG_CHECK_MODULES(LIBUDEV, libudev, [WITH_UDEV=1], []) ],
+    [yes], [
+        PKG_CHECK_MODULES(LIBUDEV, libudev)
+    ],
+    [auto], [
+        PKG_CHECK_MODULES(LIBUDEV, libudev, [with_udev=yes], [with_udev=no])
+    ],
     [AC_MSG_ERROR([invalid argument to --with-udev])]
 )
-AS_IF([test "$WITH_UDEV" = 1], [
+AS_IF([test "$with_udev" = yes], [
     AC_DEFINE(HAVE_LIBUDEV, [], [enable libudev support])
-    CFLAGS="${CFLAGS:+$CFLAGS }$LIBUDEV_CFLAGS"
-    LIBS="${LIBS:+$LIBS }$LIBUDEV_LIBS"
+    AX_APPEND_FLAG($LIBUDEV_CFLAGS, CFLAGS)
+    AX_APPEND_FLAG($LIBUDEV_LIBS, LIBS)
 ])
 
 AC_ARG_WITH(util-linux,
-    AC_HELP_STRING(--with-util-linux, [enable util-linux support (libmount, libblkid) [auto]]),
+    AC_HELP_STRING(--with-util-linux, [enable util-linux support (libmount, libblkid) [yes]]),
     [with_util_linux=$withval],
-    [with_util_linux=auto]
+    [with_util_linux=yes]
 )
 AS_CASE([$with_util_linux],
     [no], [],
     [yes], [
         PKG_CHECK_MODULES(LIBBLKID, blkid)
         PKG_CHECK_MODULES(LIBMOUNT, mount)
-        WITH_UTIL_LINUX=1
     ],
     [auto], [
-        WITH_UTIL_LINUX=1
-        PKG_CHECK_MODULES(LIBBLKID, blkid, [], [WITH_UTIL_LINUX=0])
-        PKG_CHECK_MODULES(LIBMOUNT, mount, [], [WITH_UTIL_LINUX=0])
+        with_util_linux=yes
+        PKG_CHECK_MODULES(LIBBLKID, blkid, [], [with_util_linux=no])
+        PKG_CHECK_MODULES(LIBMOUNT, mount, [], [with_util_linux=no])
     ],
-    [AC_MSG_ERROR([invalid argument to --with-udev])]
+    [AC_MSG_ERROR([invalid argument to --with-util-linux])]
 )
-AS_IF([test "$WITH_UTIL_LINUX" = 1], [
+AS_IF([test "$with_util_linux" = yes], [
     AC_DEFINE(HAVE_UTIL_LINUX, [], [enable util-linux support])
-    CFLAGS="${CFLAGS:+$CFLAGS }$LIBBLKID_CFLAGS $LIBMOUNT_CFLAGS"
-    LIBS="${LIBS:+$LIBS }$LIBBLKID_LIBS $LIBMOUNT_LIBS"
+    AX_APPEND_FLAG($LIBBLKID_CFLAGS $LIBMOUNT_CFLAGS, CFLAGS)
+    AX_APPEND_FLAG($LIBBLKID_LIBS $LIBMOUNT_LIBS, LIBS)
 ])
 
-AC_ARG_WITH([machine-id-path],
-            AC_HELP_STRING(--with-machine-id-path, [manually specify machine-id location [/etc/machine-id, /var/lib/dbus/machine-id]]),
-            [machine_id_path=$withval]
-)
-AS_IF([test -n "$machine_id_path"],
-      [
-       AS_CASE($machine_id_path,
-               [/*], [],
-               [AC_MSG_ERROR([relative machine id path is invalid])]
-              )
-       AC_DEFINE_UNQUOTED(MACHINE_ID_PATH, "$machine_id_path", [machine id location])
-      ]
-)
+PKG_CHECK_VAR(SYSTEMDSYSTEMUNITDIR, systemd, systemdsystemunitdir)
 
-AC_ARG_WITH([default-seed-path],
-    AC_HELP_STRING(--with-default-seed-path, [default seed path if no command line argument [/var/lib/random-seed]]),
-    [default_seed_path=$withval],
-    [default_seed_path=/var/lib/random-seed]
+machine_id_paths_default=/etc/machine-id:/var/lib/dbus/machine-id
+AC_ARG_VAR([MACHINE_ID_PATHS],
+    [manually specify machine-id location (colon separated list, values must not contain backslashes or quotes) [$machine_id_paths_default]]
 )
-AC_DEFINE_UNQUOTED(DEFAULT_SEED_PATH, "$default_seed_path", [default seed path])
-default_seed_path_dir=${default_seed_path%/*}
-AC_SUBST(default_seed_path_dir)
+machine_id_paths_c=`
+    printf '%s\n' "${MACHINE_ID_PATHS-$machine_id_paths_default}" |
+    sed -e '
+        s/^/{"/
+        s/:/", "/g
+        s/$/"}/
+    '
+`
+AC_DEFINE_UNQUOTED(THE_MACHINE_ID_PATHS, $machine_id_paths_c, [machine id location])
 
-EXTRA_CFLAGS=
-AX_CHECK_COMPILE_FLAG(-Wall, [EXTRA_CFLAGS="-Wall${EXTRA_CFLAGS+ $EXTRA_CFLAGS}"])
-AX_CHECK_COMPILE_FLAG(-Wextra, [EXTRA_CFLAGS="-Wextra${EXTRA_CFLAGS+ $EXTRA_CFLAGS}"])
-AX_CHECK_COMPILE_FLAG(-pedantic, [EXTRA_CFLAGS="-pedantic${EXTRA_CFLAGS+ $EXTRA_CFLAGS}"])
-AC_SUBST(EXTRA_CFLAGS)
+AC_ARG_VAR([DEFAULT_RANDOM_SEED_PATH], [default seed path if no command line argument [/var/lib/random-seed]])
+AS_IF([test -z "$DEFAULT_RANDOM_SEED_PATH"], [
+    DEFAULT_RANDOM_SEED_PATH=/var/lib/random-seed
+])
+AC_DEFINE_UNQUOTED(DEFAULT_SEED_PATH, "$DEFAULT_SEED_PATH", [default seed path])
+# everybody has POSIX shell now.
+DEFAULT_SEED_PATH_DIR=${DEFAULT_SEED_PATH%/*}
+AC_SUBST(DEFAULT_SEED_PATH_DIR)
 
-AC_OUTPUT(Makefile)
+AX_GCC_FUNC_ATTRIBUTE(fallthrough)
+
+AX_APPEND_FLAG(-D_GNU_SOURCE, CPPFLAGS)
+AX_APPEND_FLAG(-D_DEFAULT_SOURCE, CPPFLAGS)
+AX_APPEND_FLAG(-D_POSIX_C_SOURCE=200809L, CPPFLAGS)
+AX_APPEND_COMPILE_FLAGS(-Wall -Wextra -pedantic)
+AX_CHECK_PREPROC_FLAG(-MMD, [AX_APPEND_FLAG(-MMD, CPPFLAGS)])
+AX_CHECK_PREPROC_FLAG(-MP, [AX_APPEND_FLAG(-MP, CPPFLAGS)])
+
+AC_CONFIG_HEADERS(config.h)
+AC_CONFIG_FILES(Makefile)
+AC_OUTPUT
+
+AS_IF([test "$with_udev" != yes && test "$with_util_linux" != yes], [
+    AC_MSG_WARN([without udev or util-linux, functionality is severely limited and may be insecure. please read the README before continuing.])
+])

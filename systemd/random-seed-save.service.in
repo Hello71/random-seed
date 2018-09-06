@@ -1,6 +1,6 @@
 [Unit]
 Description=Random seed save
-RequiresMountsFor=@default_seed_path_dir@
+RequiresMountsFor=@default_seed_dir@
 After=systemd-remount-fs.service
 
 [Service]
@@ -13,4 +13,4 @@ ProtectKernelTunables=yes
 ProtectKernelModules=yes
 LockPersonality=yes
 TemporaryFileSystem=/:ro
-BindPaths=@default_seed_path_dir@
+BindPaths=@default_seed_dir@

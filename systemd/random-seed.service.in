@@ -2,7 +2,7 @@
 Description=Random seed load/save
 Documentation=man:random-seed(8) man:random(4)
 DefaultDependencies=no
-RequiresMountsFor=@default_seed_path_dir@
+RequiresMountsFor=@default_seed_dir@
 Conflicts=shutdown.target
 After=systemd-remount-fs.service
 Before=sysinit.target shutdown.target
@@ -21,7 +21,7 @@ ProtectKernelTunables=yes
 ProtectKernelModules=yes
 LockPersonality=yes
 TemporaryFileSystem=/:ro
-BindPaths=@default_seed_path_dir@
+BindPaths=@default_seed_dir@
 TimeoutSec=30s
 
 [Install]

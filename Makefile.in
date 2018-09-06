@@ -70,7 +70,7 @@ systemd/random-seed.service systemd/random-seed-save.service: Makefile
 	@mkdir -p $(@D)
 	sed -e 's|@sbindir[@]|$(sbindir)|g' \
 	    -e 's|@default_seed_dir[@]|$(default_seed_path_dir)|g' \
-	    $< > $@
+	    $(srcdir)/$@.in > $@
 
 systemd/random-seed.service: systemd/random-seed.service.in
 systemd/random-seed-save.service: systemd/random-seed-save.service.in

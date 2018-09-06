@@ -79,7 +79,9 @@ const char *get_drive_id(struct random_seed *rs) {
 
 #ifdef HAVE_UTIL_LINUX
 const char *get_fs_uuid_util_linux(struct random_seed *rs) {
-    return "fake uuid";
+    (void)rs;
+    fputs("error: util linux not implemented\n", stderr);
+    return NULL;
 }
 #endif
 

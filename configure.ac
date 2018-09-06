@@ -10,8 +10,10 @@ AS_IF([test "$ac_cv_prog_cc_c99" = no], [
     AC_MSG_ERROR([a C99 compatible compiler is required])
 ])
 
+AX_GCC_FUNC_ATTRIBUTE(fallthrough)
+
 AC_ARG_ENABLE(unity,
-    AC_HELP_STRING(--enable-unity, [enable unity build (similar to sqlite amalgamation) [yes]]),
+    AC_HELP_STRING(--enable-unity, [enable unity build (similar to sqlite amalgamation, increases performance) [yes]]),
     [enable_unity=$enableval],
     [enable_unity=yes]
 )
@@ -69,12 +71,11 @@ AS_IF([test "$with_util_linux" = yes], [
 
 PKG_CHECK_VAR(SYSTEMDSYSTEMUNITDIR, systemd, systemdsystemunitdir)
 
-machine_id_paths_default=/etc/machine-id:/var/lib/dbus/machine-id
 AC_ARG_VAR([MACHINE_ID_PATHS],
-    [manually specify machine-id location (colon separated list, values must not contain backslashes or quotes) [$machine_id_paths_default]]
+    [manually specify machine-id location (colon separated list, values must not contain backslashes or quotes) [/etc/machine-id:/var/lib/dbus/machine-id]]
 )
 machine_id_paths_c=`
-    printf '%s\n' "${MACHINE_ID_PATHS-$machine_id_paths_default}" |
+    printf '%s\n' "${MACHINE_ID_PATHS-/etc/machine-id:/var/lib/dbus/machine-id}" |
     sed -e '
         s/^/{"/
         s/:/", "/g
@@ -91,8 +92,6 @@ AC_DEFINE_UNQUOTED(DEFAULT_SEED_PATH, "$DEFAULT_SEED_PATH", [default seed path])
 # everybody has POSIX shell now.
 DEFAULT_SEED_PATH_DIR=${DEFAULT_SEED_PATH%/*}
 AC_SUBST(DEFAULT_SEED_PATH_DIR)
-
-AX_GCC_FUNC_ATTRIBUTE(fallthrough)
 
 AX_APPEND_FLAG(-D_GNU_SOURCE, CPPFLAGS)
 AX_APPEND_FLAG(-D_DEFAULT_SOURCE, CPPFLAGS)

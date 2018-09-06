@@ -66,18 +66,21 @@ endif
 	@mkdir -p $(@D)
 	$(CC) $(CFLAGS) $(CPPFLAGS) -c -o $@ $<
 
-%: %.in Makefile
+systemd/random-seed.service systemd/random-seed-save.service: Makefile
 	@mkdir -p $(@D)
 	sed -e 's|@sbindir[@]|$(sbindir)|g' \
 	    -e 's|@default_seed_path_dir[@]|$(default_seed_path_dir)|g' \
 	    $< > $@
+
+systemd/random-seed.service: systemd/random-seed.service.in
+systemd/random-seed-save.service: systemd/random-seed-save.service.in
 
 install: all
 	install -D -m755 random-seed $(DESTDIR)$(sbindir)/random-seed
 	install -D -m644 $(srcdir)/doc/random-seed.8 $(DESTDIR)$(mandir)/man8/random-seed.8
 ifneq ($(systemdsystemunitdir),)
 	install -D -m644 systemd/random-seed.service $(DESTDIR)$(systemdsystemunitdir)/random-seed.service
-	install -D -m644 $(srcdir)/systemd/random-seed-save.service $(DESTDIR)$(systemdsystemunitdir)/random-seed-save.service
+	install -D -m644 systemd/random-seed-save.service $(DESTDIR)$(systemdsystemunitdir)/random-seed-save.service
 	install -D -m644 $(srcdir)/systemd/random-seed-save.timer $(DESTDIR)$(systemdsystemunitdir)/random-seed-save.timer
 endif
 

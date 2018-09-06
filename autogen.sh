@@ -1,10 +1,10 @@
 #!/bin/sh
 # SPDX-License-Identifier: BSD-3-Clause
 
-set -e
+set -e -x
 
-{ ${AUTOHEADER:-autoheader} && touch config.h; } &
-${ACLOCAL:-aclocal} -I m4 --install && touch aclocal.m4
-${AUTOCONF:-autoconf} && touch configure
+${AUTOHEADER:-autoheader} -f &
+${ACLOCAL:-aclocal} -I m4 --force --install
+${AUTOCONF:-autoconf} -i -f
 
 wait

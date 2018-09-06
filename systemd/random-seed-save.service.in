@@ -5,12 +5,12 @@ After=systemd-remount-fs.service
 
 [Service]
 ExecStart=@sbindir@/random-seed save
-CapabilityBoundingSet=
-NoNewPrivileges=yes
-PrivateDevices=yes
-PrivateNetwork=yes
-ProtectKernelTunables=yes
-ProtectKernelModules=yes
-LockPersonality=yes
-TemporaryFileSystem=/:ro
-BindPaths=@default_seed_dir@
+#CapabilityBoundingSet=
+#NoNewPrivileges=yes
+#PrivateDevices=yes
+#PrivateNetwork=yes
+#ProtectKernelTunables=yes
+#ProtectKernelModules=yes
+#LockPersonality=yes
+#TemporaryFileSystem=/:ro
+#BindPaths=@default_seed_dir@

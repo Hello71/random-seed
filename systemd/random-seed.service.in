@@ -13,15 +13,15 @@ Type=oneshot
 RemainAfterExit=yes
 ExecStart=@sbindir@/random-seed load
 ExecStop=@sbindir@/random-seed save
-CapabilityBoundingSet=CAP_SYS_ADMIN
-NoNewPrivileges=yes
-PrivateDevices=yes
-PrivateNetwork=yes
-ProtectKernelTunables=yes
-ProtectKernelModules=yes
-LockPersonality=yes
-TemporaryFileSystem=/:ro
-BindPaths=@default_seed_dir@
+#CapabilityBoundingSet=CAP_SYS_ADMIN
+#NoNewPrivileges=yes
+#PrivateDevices=yes
+#PrivateNetwork=yes
+#ProtectKernelTunables=yes
+#ProtectKernelModules=yes
+#LockPersonality=yes
+#TemporaryFileSystem=/:ro
+#BindPaths=@default_seed_dir@
 TimeoutSec=30s
 
 [Install]

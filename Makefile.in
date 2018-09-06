@@ -13,8 +13,8 @@ sbindir = @sbindir@
 sysconfdir = @sysconfdir@
 localstatedir = @localstatedir@
 mandir = @mandir@
-systemdsystemunitdir = @systemdsystemunitdir@
-default_seed_path_dir = @default_seed_path_dir@
+systemdsystemunitdir = @SYSTEMDSYSTEMUNITDIR@
+default_seed_dir = @DEFAULT_SEED_DIR@
 
 CC = @CC@
 CFLAGS = @CFLAGS@
@@ -69,7 +69,7 @@ endif
 systemd/random-seed.service systemd/random-seed-save.service: Makefile
 	@mkdir -p $(@D)
 	sed -e 's|@sbindir[@]|$(sbindir)|g' \
-	    -e 's|@default_seed_path_dir[@]|$(default_seed_path_dir)|g' \
+	    -e 's|@default_seed_dir[@]|$(default_seed_path_dir)|g' \
 	    $< > $@
 
 systemd/random-seed.service: systemd/random-seed.service.in

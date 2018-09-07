@@ -24,6 +24,7 @@ LDFLAGS = @LDFLAGS@
 LIBS = @LIBS@
 
 VPATH := $(srcdir)
+
 SRC := src/id.c src/load.c src/main.c src/random-seed.c src/save.c src/sha2.c src/util.c
 OBJ := $(SRC:.c=.o)
 DEP := $(SRC:.c=.d)
@@ -47,7 +48,7 @@ ifneq ($(UNITY),)
 random-seed: random-seed.o
 	$(CC) $(LDFLAGS) $^ $(LIBS) -o $@
 
-random-seed.o: CPPFLAGS+=-I$(srcdir)/src
+random-seed.o: CPPFLAGS+=-I$(srcdir)
 
 random-seed.c: Makefile
 	for f in $(SRC); do \
